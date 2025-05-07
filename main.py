@@ -1,5 +1,4 @@
 from typing import Annotated
-import httpx
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,9 +7,11 @@ from schemas import Input, Output
 
 # a descriptive title and description are helpful for the navigator
 app = FastAPI(
-    title="Navigator Tool Template",
+    title="Heart Rate Calculator",
     description=(
-        "The Navigator tool template provides a starting point for creating new Navigator tools. "
+        "Calculate maximum heart rate and target heart rate zones based on age and activity level. "
+        "Supports different activity profiles including sedentary, active, and athlete. "
+        "Returns personalized heart rate recommendations."
     ),
     version="1.0.0",
 )
@@ -24,30 +25,66 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# including docstrings for each endpoint is helpful for the navigator
-# the line data: Annotated[Input, Form()] ensures that the input data is form-based.
+# Calculate maximum heart rate based on age and activity level
 @app.post(
     "/call/",
     response_model=Output,
 )
 async def call(data: Annotated[Input, Form()]) -> Output | JSONResponse:
-    """Process the input data and return the output.
+    """Calculate maximum heart rate based on age and activity level.
 
     Args:
-        data: The input data.
+        data: Input containing:
+            - age: Age in years (int)
+            - activity_level: Activity level ('sedentary', 'active', or 'athlete')
 
     Returns:
-        The output data.
+        Maximum heart rate calculation and target heart rate zones
     """
-    # use httpx for external api requests (anything you might use requests for) in order to leverage
-    # async capabilities of FastAPI
-    async with httpx.AsyncClient() as client:
-        try:
-            return Output(**data.model_dump())
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+    try:
+        age = data.data.get('age')
+        activity_level = data.data.get('activity_level', 'active')
+
+        # Validate inputs
+        if not isinstance(age, int) or age < 0 or age > 120:
             return JSONResponse(
-                {"error": f"Request failed: {e}"}, status_code=500
+                {"error": "Age must be a number between 0 and 120"}, 
+                status_code=400
             )
+            
+        if activity_level not in ['sedentary', 'active', 'athlete']:
+            return JSONResponse(
+                {"error": "Activity level must be 'sedentary', 'active', or 'athlete'"}, 
+                status_code=400
+            )
+
+        # Calculate max heart rate using common formula
+        max_hr = 220 - age
+        
+        # Adjust based on activity level
+        if activity_level == 'athlete':
+            max_hr += 5
+        elif activity_level == 'sedentary':
+            max_hr -= 5
+            
+        # Calculate target zones
+        zones = {
+            'low_intensity': f"{int(max_hr * 0.5)}-{int(max_hr * 0.6)}",
+            'fat_burn': f"{int(max_hr * 0.6)}-{int(max_hr * 0.7)}",
+            'cardio': f"{int(max_hr * 0.7)}-{int(max_hr * 0.85)}",
+            'peak': f"{int(max_hr * 0.85)}-{max_hr}"
+        }
+        
+        return Output(data={
+            'max_heart_rate': max_hr,
+            'target_zones': zones
+        })
+        
+    except Exception as e:
+        return JSONResponse(
+            {"error": f"Calculation failed: {str(e)}"}, 
+            status_code=500
+        )
 
 # include a health check endpoint to help determine if the tool is healthy
 @app.get("/health", response_class=JSONResponse)
