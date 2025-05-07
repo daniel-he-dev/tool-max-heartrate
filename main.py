@@ -30,7 +30,7 @@ app.add_middleware(
     "/call/",
     response_model=Output,
 )
-async def call(data: Annotated[Input, Form()]) -> Output | JSONResponse:
+async def call(data: Input) -> Output | JSONResponse:
     """Calculate maximum heart rate based on age and activity level.
 
     Args:
