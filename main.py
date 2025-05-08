@@ -1,7 +1,8 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import uvicorn
 
 from schemas import Input, Output
 
@@ -30,7 +31,10 @@ app.add_middleware(
     "/call/",
     response_model=Output,
 )
-async def call(data: Input) -> Output | JSONResponse:
+async def call(
+    age: Annotated[int, Form(title="Age", description="Age in years (0-120)")] = 35,
+    activity_level: Annotated[Literal['sedentary', 'active', 'athlete'], Form(title="Activity Level", description="Your typical activity level")] = 'active'
+) -> Output | JSONResponse:
     """Calculate maximum heart rate based on age and activity level.
 
     Args:
@@ -42,9 +46,6 @@ async def call(data: Input) -> Output | JSONResponse:
         Maximum heart rate calculation and target heart rate zones
     """
     try:
-        age = data.data.get('age')
-        activity_level = data.data.get('activity_level', 'active')
-
         # Validate inputs
         if not isinstance(age, int) or age < 0 or age > 120:
             return JSONResponse(
