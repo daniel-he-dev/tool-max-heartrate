@@ -10,7 +10,7 @@ from schemas import Input, Output
 app = FastAPI(
     title="Heart Rate Calculator",
     description=(
-        "Calculate maximum heart rate and target heart rate zones based on age and activity level. "
+        "Calculate the maximum heart rate and target heart rate zones based on age and activity level. "
         "Supports different activity profiles including sedentary, active, and athlete. "
         "Returns personalized heart rate recommendations."
     ),
